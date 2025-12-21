@@ -102,6 +102,7 @@ const PasswordCheck = ({ handleStep, handlesetCountdown, lang }) => {
       
       // Save token to MMKV
       storage.set('token', response.data.data.token);
+      console.log("login data" , response.data.data)
       // Alert.alert("token",response.data.data.token)
       if (response.data.data.isNew === true) {
         handleStep(7);

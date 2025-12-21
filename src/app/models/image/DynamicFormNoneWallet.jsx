@@ -32,6 +32,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import AntDesign from 'react-native-vector-icons/AntDesign';
+import GlowButton from './SubmitBtn'
 
 // Initialize MMKV
 const storage = new createMMKV();
@@ -774,10 +775,12 @@ const DynamicForm = ({ ModelFormData, ModelPageData }) => {
           onPress={handleSubmit}
           disabled={isLoading || isSubmitting}
         >
+        
           {isLoading || isSubmitting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.submitButtonText}>ارسال درخواست</Text>
+            <GlowButton />
+       
           )}
         </TouchableOpacity>
         
@@ -1060,9 +1063,9 @@ const styles = StyleSheet.create({
   },
   improveButton: {
     position: 'absolute',
-    left: 8,
-    top: 8,
-    backgroundColor: '#007AFF',
+    left: -8,
+    bottom: -8,
+    backgroundColor: '#000',
     borderRadius: 20,
     width: 40,
     height: 40,
@@ -1070,7 +1073,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',

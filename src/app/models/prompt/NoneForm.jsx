@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  TouchableWithoutFeedback
 } from "react-native";
 import { Keyboard } from 'react-native';
 import Config from 'react-native-config';
@@ -91,7 +92,16 @@ const BubbleComponent = ({ items }) => {
 // کامپوننت SideMenuMobile
 const SideMenuMobile = ({ children, isDarkMode, setMobileHistoryMenu }) => {
   return (
-    <Modal animationType="fade" transparent={false} visible={true}>
+    <Modal
+     animationType="fade" transparent={true} visible={true} 
+    //  onDismiss={() => setMobileHistoryMenu(false)}
+     onRequestClose={() => setMobileHistoryMenu(false)}
+     >
+
+        <TouchableWithoutFeedback 
+          onPress={() => setModalVisible(false)}>
+          <View style={styles.backdrop} />
+        </TouchableWithoutFeedback>
       <View style={[styles.sideMenuContainer, isDarkMode ? styles.darkBg : styles.lightBg]}>
         <TouchableOpacity style={styles.closeButton} onPress={() => setMobileHistoryMenu(false)}>
           <Icon name="close" size={30} color={isDarkMode ? "#fff" : "#000"} />
@@ -228,6 +238,7 @@ export default function RegularModel({ ModelPageData, ParentSideMenuState, Paren
   };
 
   const showHistory = (historyConv, key, chat_id, hist) => {
+    
     setMessages([]);
     setSelectHistoryBtnKey(key);
     setSelectedChatId(chat_id);
@@ -251,14 +262,18 @@ export default function RegularModel({ ModelPageData, ParentSideMenuState, Paren
     ParenHandleSideBar();
     setError(null);
     const token = storage.getString("token");
+    console.log("id->",id)
     // await AsyncStorage.getItem("token");
     try {
       const response = await axios.post(
-        `${process.env.EXPO_PUBLIC_API_BASE_URL}/response/deletechathistory/`,
+        `${apiUrl}/response/deletechathistory/`,
         { chat_id: id },
         {
           headers: {
-            Authorization: `${token}`,
+            ...(token ? { Authorization: `${token}` } : {}),
+            Referer: 'https://test.irani-ai.com/', // 
+            Host:"api2.irani-ai.com",
+            // "Content-Type": "multipart/form-data",
           },
         }
       );
@@ -266,7 +281,7 @@ export default function RegularModel({ ModelPageData, ParentSideMenuState, Paren
         fetchHistory();
       }
     } catch (err) {
-      // console.error(err);
+      console.log("err" , err.response.data);
     } finally {
       setIsLoading(false);
     }
@@ -285,7 +300,7 @@ export default function RegularModel({ ModelPageData, ParentSideMenuState, Paren
               styles.historyButton,
               key === selectHistoryBtnKey && styles.selectedHistoryButton,
             ]}
-            onPress={() => showHistory(histItem.conversation, key, histItem.id, history)}
+            onPress={() => {showHistory(histItem.conversation, key, histItem.id, history), ParenHandleSideBar()}}
           >
             <Text numberOfLines={1} style={styles.historyText}>
               {firstUserMessage.content}
@@ -399,7 +414,7 @@ export default function RegularModel({ ModelPageData, ParentSideMenuState, Paren
             Authorization: `${token}`,
             ...(token ? { Authorization: `${token}` } : {}),
             Referer: 'https://test.irani-ai.com/', // 
-           Host:"api2.irani-ai.com",
+            Host:"api2.irani-ai.com",
             "Content-Type": "multipart/form-data",
           },
         }
@@ -443,6 +458,8 @@ export default function RegularModel({ ModelPageData, ParentSideMenuState, Paren
 
   const regenerateChat = async () => {
     Toast.hide();
+    // setButnSubmit(false);
+
     if (butnSubmit) {
       Toast.show({
         type: "info",
@@ -458,10 +475,10 @@ export default function RegularModel({ ModelPageData, ParentSideMenuState, Paren
     const vonline = selIsonline ? 1 : 0;
     try {
       const response = await axios.post(
-        `${process.env.EXPO_PUBLIC_API_BASE_URL}/response/chatai/`,
+        `${apiUrl}/response/chatai/`,
         {
           "chat-ai": "",
-          regenerate: selectedChatId || (storage.getString("free_chat_id")) || 0,
+          regenerate: selectedChatId || (storage.getString("chat_id")) || 0,
           id: 0,
           "chat-id": 0,
           "page-id": selectedLLM.page_id,
@@ -471,6 +488,10 @@ export default function RegularModel({ ModelPageData, ParentSideMenuState, Paren
         {
           headers: {
             Authorization: `${token}`,
+            ...(token ? { Authorization: `${token}` } : {}),
+            Referer: 'https://test.irani-ai.com/', // 
+           Host:"api2.irani-ai.com",
+            "Content-Type": "multipart/form-data",
           },
         }
       );
@@ -781,7 +802,9 @@ const handleStreamReader = async (responseData) => {
   //   },
   //   // ... سایر آیتم‌ها
   // ];
-
+  useEffect(()=>{
+    console.log(selectedLLM)
+  },[selectLLM])
   return (
     <View style={[styles.container, isDarkMode ? styles.darkContainer : styles.lightContainer]}>
       {/* Side Menu Mobile */}
@@ -840,15 +863,18 @@ const handleStreamReader = async (responseData) => {
                 message.sender === "user" ? styles.userMessage : styles.botMessage,
               ]}
             >
-              <Image
-                source={{
-                  uri:
-                    message.sender === "user"
-                      ? avatar
-                      : message.llm_img || selectedLLM?.img_url || "/default-icon.svg",
-                }}
+              {message.sender != "user" ? 
+              <>
+              <SvgUri
+                uri={
+                      message.sender === "user"
+                      ?  selectedLLM?.img_url
+                      :  selectedLLM?.img_url || "/default-icon.svg" 
+                }        
                 style={styles.avatar}
-              />
+                />
+
+                
               <View
                 style={[
                   styles.messageBubble,
@@ -863,6 +889,36 @@ const handleStreamReader = async (responseData) => {
                 )}
                 <Text style={styles.timestamp}>{message.timestamp}</Text>
               </View>
+              </>
+
+              :
+              <>
+                
+              <View
+                style={[
+                  styles.messageBubble,
+                  message.sender === "user" ? styles.userBubble : styles.botBubble,
+                ]}
+              >
+                {message.image && <Image source={{ uri: message.image }} style={styles.messageImage} />}
+                {message.sender === "assistant" || message.sender === "bot" ? (
+                  <Markdown style={markdownStyles}>{message.content}</Markdown>
+                ) : (
+                  <Text style={styles.messageText}>{message.content}</Text>
+                )}
+                <Text style={styles.timestamp}>{message.timestamp}</Text>
+              </View>
+              <SvgUri
+                uri={
+                      message.sender === "user"
+                      ?  selectedLLM?.img_url
+                      :  selectedLLM?.img_url || "/default-icon.svg" 
+                }        
+                style={styles.avatar}
+                />
+
+              </>}
+
             </View>
           ))}
           {isLoading && (
@@ -898,7 +954,8 @@ const handleStreamReader = async (responseData) => {
           {/* ردیف دکمه‌ها */}
           <View style={styles.buttonRow}>
             <TouchableOpacity onPress={toggleModal} style={styles.modelButton}>
-              <Image source={{ uri: selectedLLM.img_url }} style={styles.modelIcon} />
+              {/* <Image source={{ uri: selectedLLM.img_url }} style={styles.modelIcon} /> */}
+              <SvgUri uri={selectedLLM.img_url } height={25}  style={styles.modelIcon}/>
               <Text numberOfLines={1} style={styles.modelButtonText}>
                 {selectedLLM.title}
               </Text>
@@ -970,7 +1027,7 @@ const handleStreamReader = async (responseData) => {
 
 <Modal
   visible={isFilePickerModalOpen}
-  animationType="fade"
+  animationType="slide"
   transparent={true}
   onRequestClose={toggleFilePickerModal}
   hardwareAccelerated={true}
@@ -1010,8 +1067,15 @@ const handleStreamReader = async (responseData) => {
               .then((res) => {
                 const allFilesArePdfOrDocx = res.every((file) => file.hasRequestedType)
                 if (!allFilesArePdfOrDocx) {
+                  console.log()
                   // tell the user they selected a file that is not a pdf or docx
+                }else{
+                  console.log("file picker ", res[0].uri)
+                  setSelectedImage(res[0].uri)
+                  setImagePreview(res[0].uri)
+                  
                 }
+
                 // addResult(res)
               })
               .catch()
@@ -1039,6 +1103,8 @@ const handleStreamReader = async (responseData) => {
               } else if (response.assets && response.assets[0]) {
                 const source = { uri: response.assets[0].uri };
                 // پردازش عکس گرفته شده
+                setSelectedImage(source)
+                setImagePreview(response.assets[0].uri)
                 console.log('Camera image:', source);
               }
             });
@@ -1067,6 +1133,8 @@ const handleStreamReader = async (responseData) => {
               } else if (response.assets && response.assets[0]) {
                 const source = { uri: response.assets[0].uri };
                 // پردازش عکس انتخاب شده
+                setSelectedImage(source)
+                setImagePreview(response.assets[0].uri)
                 console.log('Gallery image:', source);
               }
             });
@@ -1137,7 +1205,7 @@ const handleStreamReader = async (responseData) => {
                 width="100%"
                 // height="100%"
             
-                uri={item.img_url}/>
+                uri={item.img_url || selectedLLM.img_url}/>
               </View>
             <Text 
               style={styles.llmTitle}
@@ -1181,6 +1249,9 @@ const handleStreamReader = async (responseData) => {
 }
 
 const styles = StyleSheet.create({
+  historySidemenu:{
+    backgroundColor:"#000"
+  },
     svgContainer: {
     width: 50,
     height: 50,
@@ -1188,7 +1259,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  container: { flex: 1 },
+  container: { flex: 1, },
   darkContainer: { backgroundColor: "#000" },
   lightContainer: { backgroundColor: "#f5f5f5" },
   sidebar: {
@@ -1216,7 +1287,7 @@ const styles = StyleSheet.create({
   },
   userMessage: { justifyContent: "flex-end" },
   botMessage: { justifyContent: "flex-start" },
-  avatar: { width: 30, height: 30, borderRadius: 15, marginHorizontal: 8 },
+  avatar: { width: 15, height: 15, borderRadius: 15, marginHorizontal: 8 },
   messageBubble: {
     maxWidth: "70%",
     padding: 12,
@@ -1240,7 +1311,7 @@ const styles = StyleSheet.create({
   },
   imagePreviewContainer: {
     position: "absolute",
-    bottom: 120,
+    bottom: 140,
     left: 10,
     backgroundColor: "rgba(5,67,99,0.9)",
     borderRadius: 8,
@@ -1260,12 +1331,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#054363",
-    padding: 10,
+    padding: 3,
     borderRadius: 8,
     flex: 2,
     marginHorizontal: 2,
   },
-  modelIcon: { width: 20, height: 20, marginRight: 8 },
+  modelIcon: { width: 10, height: 10, marginRight: 2 },
   modelButtonText: { color: "#fff", fontSize: 12 },
   actionButton: {
     backgroundColor: "#054363",
@@ -1289,7 +1360,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 50,
     maxHeight: 150,
-    borderRadius: 25,
+    borderRadius: 5,
     paddingHorizontal: 20,
     paddingRight: 100,
     fontSize: 16,
@@ -1361,33 +1432,37 @@ const styles = StyleSheet.create({
   bubbleItem: { alignItems: "center", marginHorizontal: 10 },
   bubbleIcon: { width: 50, height: 50, borderRadius: 25 },
   bubbleText: { marginTop: 5, fontSize: 12 },
-  historyItemContainer: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+  historyItemContainer: { flexDirection: "row", alignItems: "center", marginHorizontal:20},
   historyButton: {
     flex: 1,
-    backgroundColor: "#333",
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: "#ccc",
+    color:"#000",
+    paddingHorizontal:5,
+    paddingVertical:5,
+    borderRadius: 3,
   },
-  selectedHistoryButton: { backgroundColor: "#555" },
-  historyText: { color: "#fff" },
-  deleteButton: { padding: 10 },
-  sideMenuContainer: { flex: 1, paddingTop: 50 },
+  selectedHistoryButton: { backgroundColor: "#888", color:"#FFF" },
+  historyText: { color: "#000" },
+  deleteButton: { padding: 5 },
+  sideMenuContainer: { flex: 1, paddingTop: 50, width:'70%', direction:'rtl' },
   filePicker:{flex:1, paddingTop:50, height:'20%'},
   darkBg: { backgroundColor: "#000" },
   lightBg: { backgroundColor: "#fff" },
-  closeButton: { position: "absolute", top: 20, right: 20, zIndex: 10 },
+  closeButton: { position: "absolute", top: 5, right: 20, zIndex: 10 },
 
 
  modalOverlayFilePicker: {
     flex: 1,
-    backgroundColor: '#ccc',
+    // backgroundColor: '#ccc',
     justifyContent: 'flex-end',
+    alignItems:'center'
   },
   modalContentFilePicker: {
-    backgroundColor: 'white',
+    backgroundColor: '#f0f0f0',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 30,
+    width:"90%"
   },
   modalFilePicker: {
     flexDirection: 'row',
