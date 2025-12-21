@@ -161,8 +161,12 @@ export default function RegularModel({ ModelPageData, ParentSideMenuState, Paren
     if (!ModelPageData) return;
     // AsyncStorage.getItem("profileChat").then((url) => setAvatar(url));
     let url  = storage.getString("profileChat");
-    if(url){
-      setAvatar(url)
+    let profile  = storage.getString("profile");
+    let prf = JSON.parse(profile)
+    console.log("user profile" ,prf['user_info']['user_img'])
+    console.log("user profile" ,profile)
+    if(prf['user_info']['user_img']){
+      setAvatar(prf['user_info']['user_img'])
     }
 
   }, []);
@@ -176,7 +180,7 @@ export default function RegularModel({ ModelPageData, ParentSideMenuState, Paren
     const defaultLLM = {
       id: 11,
       title: "Chatgpt o1",
-      img_url: "http://irani-ai.com/public/images/llm/chatgpt_logo_chatgpt_logo_square_green_gpt_ia_openai_icon_264976.png",
+      img_url: "https://www.irani-ai.com/public/images/llm/frame-460.svg",
       accept_file: 0,
       page_id: 11,
     };
@@ -586,87 +590,7 @@ const handleStreamReader = async (responseData) => {
 
 
 
-  // const handleStreamReader = async (responseData) => {
-  //   if (!responseData) return;
-  //   setIsLoading(true);
-  //   const abortController = new AbortController();
-  //   try {
-  //     let { stream_url, task_id, "chat-id": chatID, uid, "page-id": pageID } = responseData;
-  //     // AsyncStorage.setItem("free_chat_id", chatID.toString());
-  //     console.log("ChatId", chatID)
-      
-  //     storage.set("free_chat_id", chatID.toString())
-  //     // uid = await AsyncStorage.getItem("uid");
-  //     // uid = storage.getString("uid");
-  //     const response =  await fetchPolyfill(
-  //       `${apiUrl}/gpu.php?task=${stream_url}&task-id=${task_id}&id=${chatID}&user=${uid}&page=${pageID}&lang=fa`,
-  //       {
-  //         headers: {
-  //           Authorization: (storage.getString("token")) || "",
-  //           Referer: 'https://test.irani-ai.com/', // 
-  //           Host:"api2.irani-ai.com"
-  //         },
-  //       }
-  //     );
-  //      console.log(response)
-  //     if (!response.ok) {
-  //       throw new Error(`HTTP error! status: ${response.status}`);
-  //     }
-  //     // const reader = response.body.getReader();
-  //     // const decoder = new TextDecoder("utf-8");
-  //     // let accumulatedText = "";
-  //     // const botMessageId = Date.now();
-  //     // setMessages((prev) => [
-  //     //   ...prev,
-  //     //   {
-  //     //     id: botMessageId,
-  //     //     sender: "bot",
-  //     //     content: "",
-  //     //     timestamp: new Date().toLocaleTimeString(),
-  //     //     lang: "fa",
-  //     //   },
-  //     // ]);
-
-  //   const responseText = await response.text();
-    
-  //   const botMessageId = Date.now();
-  //   setMessages((prev) => [
-  //     ...prev,
-  //     {
-  //       id: botMessageId,
-  //       sender: "bot",
-  //       content: responseText,
-  //       timestamp: new Date().toLocaleTimeString(),
-  //       lang: "fa",
-  //     },
-  //   ]);
-
-
-  //     while (true) {
-  //       const { done, value } = await reader.read();
-  //       if (done) {
-  //         Toast.hide();
-  //         setButnSubmit(false);
-  //         break;
-  //       }
-  //       const chunk = decoder.decode(value);
-  //       accumulatedText += chunk;
-  //       setMessages((prev) =>
-  //         prev.map((msg) =>
-  //           msg.id === botMessageId ? { ...msg, content: accumulatedText } : msg
-  //         )
-  //       );
-  //     }
-  //   } catch (error) {
-  //     abortController.abort();
-  //     console.log("Error in stream reading:", error.response);
-  //     Toast.hide();
-  //     setButnSubmit(false);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
-
+ 
   const check_image_credit = async () => {
     try {
       const token = storage.getString("token")
@@ -735,23 +659,23 @@ const handleStreamReader = async (responseData) => {
     }
   }, [selectedLLM]);
 
-  const handleImageUpload = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("دسترسی به گالری لازم است");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-    if (!result.canceled) {
-      setSelectedImage(result.assets[0]);
-      setImagePreview(result.assets[0].uri);
-    }
-  };
+  // const handleImageUpload = async () => {
+  //   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  //   if (status !== "granted") {
+  //     Alert.alert("دسترسی به گالری لازم است");
+  //     return;
+  //   }
+  //   const result = await ImagePicker.launchImageLibraryAsync({
+  //     mediaTypes: ImagePicker.MediaTypeOptions.Images,
+  //     allowsEditing: true,
+  //     aspect: [4, 3],
+  //     quality: 1,
+  //   });
+  //   if (!result.canceled) {
+  //     setSelectedImage(result.assets[0]);
+  //     setImagePreview(result.assets[0].uri);
+  //   }
+  // };
 
   const removeImage = () => {
     setSelectedImage(null);
@@ -865,6 +789,8 @@ const handleStreamReader = async (responseData) => {
             >
               {message.sender != "user" ? 
               <>
+
+
               <SvgUri
                 uri={
                       message.sender === "user"
@@ -873,6 +799,7 @@ const handleStreamReader = async (responseData) => {
                 }        
                 style={styles.avatar}
                 />
+              
 
                 
               <View
@@ -908,15 +835,12 @@ const handleStreamReader = async (responseData) => {
                 )}
                 <Text style={styles.timestamp}>{message.timestamp}</Text>
               </View>
-              <SvgUri
-                uri={
-                      message.sender === "user"
-                      ?  selectedLLM?.img_url
-                      :  selectedLLM?.img_url || "/default-icon.svg" 
-                }        
-                style={styles.avatar}
-                />
 
+              <Image 
+                source={avatar ? {uri: avatar} : require("../../assets/noAvatar.png")} 
+                style={styles.avatarImg}
+                onError={() => {/* هندل خطای لود تصویر */}}
+              />
               </>}
 
             </View>
@@ -955,7 +879,9 @@ const handleStreamReader = async (responseData) => {
           <View style={styles.buttonRow}>
             <TouchableOpacity onPress={toggleModal} style={styles.modelButton}>
               {/* <Image source={{ uri: selectedLLM.img_url }} style={styles.modelIcon} /> */}
-              <SvgUri uri={selectedLLM.img_url } height={25}  style={styles.modelIcon}/>
+              {selectedLLM.img_url && 
+              <SvgUri uri={selectedLLM.img_url ||  img_url} height={25}  style={styles.modelIcon}/>
+              }
               <Text numberOfLines={1} style={styles.modelButtonText}>
                 {selectedLLM.title}
               </Text>
@@ -1288,6 +1214,7 @@ const styles = StyleSheet.create({
   userMessage: { justifyContent: "flex-end" },
   botMessage: { justifyContent: "flex-start" },
   avatar: { width: 15, height: 15, borderRadius: 15, marginHorizontal: 8 },
+  avatarImg: { width: 45, height: 45, borderRadius: 15, marginHorizontal: 8 },
   messageBubble: {
     maxWidth: "70%",
     padding: 12,

@@ -26,6 +26,8 @@ const PasswordCheck = ({ handleStep, handlesetCountdown, lang }) => {
   const [captchaRes, setCaptchaRes] = useState('');
   const [password, setPassword] = useState('');
   const apiUrl = Config.API_URL;
+  const refererUrl = Config.Referer_URL;
+  const hostUrl = Config.Host_URL;
   const {
     isDarkMode,
     toggleTheme,
@@ -50,10 +52,10 @@ const PasswordCheck = ({ handleStep, handlesetCountdown, lang }) => {
         {
           headers: {
             'Content-Type': 'application/json',
-            Referer: 'https://test.irani-ai.com/',
+            Referer: refererUrl,
           },
           // تنظیم Host معمولاً از طریق baseURL بهتر است
-          baseURL: 'https://api2.irani-ai.com',
+          baseURL: hostUrl,
         }
       );
       setCaptchaUrl(resp.data.data.url);
@@ -66,19 +68,42 @@ const PasswordCheck = ({ handleStep, handlesetCountdown, lang }) => {
       setLoading(false);
     }
   };
-
+  const getUserProfile = async () => {
+    let token = storage.getString("token")
+     try {
+      const resp = await axios.get(
+        `${apiUrl}/dashboard/?lang=fa&style=dark`,
+        {
+          headers: {
+            Authorization: `${token}`,
+            'Content-Type': 'application/json',
+            Referer: refererUrl,
+          },
+          // تنظیم Host معمولاً از طریق baseURL بهتر است
+          baseURL: hostUrl,
+        }
+      );
+      const jsonString = JSON.stringify(resp.data.data);
+      storage.set("profile", jsonString)
+      console.log(storage.getString("profile"))
+      console.log(resp.data)
+    } catch (err) {
+      console.log(err.response)
+      setError(err.response?.data?.message || err.message || 'خطا در ارسال مجدد کد');
+    } finally {
+      setLoading(false);
+    }  
+  }
   const handlePassword = async () => {
     setLoading(true);
     setError('');
     let uid2 = storage.getString('uid')
     console.log(
-
           uid2,
           password,
           captchaRes,
           captchaID,
          "fa", 
-
     )
     try {
       const response = await axios.post(
@@ -93,16 +118,18 @@ const PasswordCheck = ({ handleStep, handlesetCountdown, lang }) => {
         {
           headers: {
             'Content-Type': 'application/json',
-            Referer: 'https://test.irani-ai.com/',
+            Referer: refererUrl,
           },
           // تنظیم Host معمولاً از طریق baseURL بهتر است
-          baseURL: 'https://api2.irani-ai.com',
+          baseURL: hostUrl,
         }
       );
       
       // Save token to MMKV
       storage.set('token', response.data.data.token);
       console.log("login data" , response.data.data)
+      await getUserProfile()
+
       // Alert.alert("token",response.data.data.token)
       if (response.data.data.isNew === true) {
         handleStep(7);

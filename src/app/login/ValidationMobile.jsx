@@ -18,6 +18,7 @@ import Config from 'react-native-config';
 // import SmsRetriever from 'react-native-sms-retriever';
 // import DeviceInfo from 'react-native-device-info';
 
+import { useSmsUserConsent } from '@eabdullazyanov/react-native-sms-user-consent';
 // مقداردهی اولیه MMKV
 const storage = new createMMKV();
 
@@ -27,66 +28,18 @@ const Validatemobile = ({ handleStep, handlesetCountdown, countdown, lang }) => 
   const [verificationCode, setVerificationCode] = useState('');
   const [appState, setAppState] = useState(AppState.currentState);
   const apiUrl = Config.API_URL;
+  const refererUrl = Config.Referer_URL;
+  const hostUrl = Config.Host_URL;
   // خواندن شماره موبایل از MMKV
   const mobile = storage.getString('mobile') || '';
+  const retrievedCode = useSmsUserConsent(4);
+ 
 
-  // دریافت اتوماتیک SMS در اندروید
   useEffect(() => {
-    let smsListener = null;
-    let appStateListener = null;
+    if (retrievedCode) {setVerificationCode(retrievedCode);console.log("otp", retrievedCode)}
+  }, [retrievedCode]);
 
-    // فقط در اندروید SMS Retriever API کار می‌کند
-    if (Platform.OS === 'android') {
-      const startSmsRetriever = async () => {
-        try {
-          // دریافت هش اپلیکیشن برای SMS Retriever
-          const hash = await SmsRetriever.getAppSignature();
-          console.log('App Hash:', hash);
 
-          // گوش دادن به SMS
-          smsListener = await SmsRetriever.startSmsRetriever();
-          smsListener.addListener('onSmsReceived', (event) => {
-            const message = event.message;
-            console.log('SMS Received:', message);
-            
-            // استخراج کد OTP از پیام (فرض می‌کنیم کد ۴ رقمی است)
-            const otpMatch = message.match(/\b\d{4,6}\b/);
-            if (otpMatch) {
-              const otp = otpMatch[0];
-              setVerificationCode(otp);
-              
-              // ارسال خودکار فرم بعد از دریافت کد
-              setTimeout(() => {
-                handleAutoSubmit(otp);
-              }, 500);
-            }
-          });
-        } catch (error) {
-          console.log('SMS Retriever Error:', error);
-        }
-      };
-
-      // startSmsRetriever();
-
-      // مدیریت وضعیت اپ (برای restart SMS Retriever وقتی اپ از background برگشت)
-      appStateListener = AppState.addEventListener('change', (nextAppState) => {
-        if (appState.match(/inactive|background/) && nextAppState === 'active') {
-          startSmsRetriever();
-        }
-        setAppState(nextAppState);
-      });
-
-      // cleanup
-      return () => {
-        if (smsListener) {
-          smsListener.stop();
-        }
-        if (appStateListener) {
-          appStateListener.remove();
-        }
-      };
-    }
-  }, []);
 
   // تابع برای ارسال خودکار فرم
   const handleAutoSubmit = async (code) => {
@@ -116,7 +69,6 @@ const Validatemobile = ({ handleStep, handlesetCountdown, countdown, lang }) => 
           mobile,
           code,
         }
-
     )
     try {
       const response = await axios.post(
@@ -128,10 +80,10 @@ const Validatemobile = ({ handleStep, handlesetCountdown, countdown, lang }) => 
         {
           headers: {
             'Content-Type': 'application/json',
-            Referer: 'https://test.irani-ai.com/',
+            Referer: refererUrl,
           },
           // تنظیم Host معمولاً از طریق baseURL بهتر است
-          baseURL: 'https://api2.irani-ai.com',
+          baseURL: hostUrl,
         }        
       );
       console.log("response", response.data)
