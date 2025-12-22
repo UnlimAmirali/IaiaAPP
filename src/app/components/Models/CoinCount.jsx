@@ -24,6 +24,8 @@ export default function MenuTop({ isDarkMode }) {
   const { language } = useApp();
   const storage = new createMMKV();
   const apiUrl = Config.API_URL;
+  const refererUrl = Config.Referer_URL;
+  const hostUrl = Config.Host_URL;
 
   const fetchCoin = useCallback(async () => {
     try {
@@ -42,9 +44,12 @@ export default function MenuTop({ isDarkMode }) {
         `${apiUrl}/wallet/coins/?lang=${language}&style=${isDarkMode ? "dark" : "light"}`,
         {
           headers: {
-            Authorization: token,
-            "Content-Type": "application/json",
+            Authorization: `${token}`,
+            'Content-Type': 'application/json',
+            Referer: refererUrl,
           },
+          // تنظیم Host معمولاً از طریق baseURL بهتر است
+          baseURL: hostUrl,
         }
       );
 
@@ -53,7 +58,7 @@ export default function MenuTop({ isDarkMode }) {
         setIsLogin(true);
       }
     } catch (error) {
-      console.error("Error fetching coin data:", error);
+      console.log("Error fetching coin data:", error);
       setCoin(0);
       
       // بررسی اینکه آیا خطا به دلیل عدم احراز هویت است

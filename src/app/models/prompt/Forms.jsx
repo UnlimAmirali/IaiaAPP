@@ -14,10 +14,12 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  ToastAndroid
 } from 'react-native';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createMMKV } from 'react-native-mmkv';
 import axios from 'axios';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { Picker } from '@react-native-picker/picker';
 import Config from 'react-native-config';
 // import DateTimePicker from '@react-native-community/datetimepicker';
@@ -30,6 +32,8 @@ import FeatherIcon from 'react-native-vector-icons/Feather';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Markdown from 'react-native-markdown-display';
 import { WebView } from 'react-native-webview';
+import Toast from "react-native-toast-message";
+
 
 // Initialize MMKV
 const storage = new createMMKV();
@@ -80,6 +84,16 @@ const DynamicForm = ({ ModelFormData, ModelPageData, ParentSideMenuState, ParenH
   const [language, setLanguage] = useState('fa');
 
   const { width, height } = Dimensions.get('window');
+
+  const showToastWithGravity = (msg) => {
+    ToastAndroid.show(
+      msg,
+      ToastAndroid.SHORT,
+      ToastAndroid.CENTER,
+    );
+  };
+
+
 
   // Get token from MMKV
   const getToken = () => {
@@ -148,18 +162,40 @@ const DynamicForm = ({ ModelFormData, ModelPageData, ParentSideMenuState, ParenH
     fetchFormData();
   }, [ModelFormData]);
 
-  const handleCopy = async (text) => {
-    try {
-      // For React Native, you might want to use Clipboard API
-      // import Clipboard from '@react-native-clipboard/clipboard';
-      // Clipboard.setString(text);
-      
-      Alert.alert('کپی شد', 'متن با موفقیت کپی شد');
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
-      Alert.alert('خطا', 'خطا در کپی کردن متن');
-    }
-  };
+const handleCopy = async (text) => {
+  console.log('Copying text:', text);
+  
+  if (!text || text.trim() === '') {
+    Alert.alert('خطا', 'متن برای کپی معتبر نیست');
+    return;
+  }
+  
+  try {
+    // کپی کردن متن
+    Clipboard.setString(text);
+    
+    // نمایش اعلان موفقیت
+    Alert.alert(
+      'کپی شد',
+      'متن با موفقیت کپی شد',
+      [{ text: 'OK', onPress: () => console.log('OK Pressed') }],
+      { cancelable: false }
+    );
+
+
+
+      showToastWithGravity( 'متن با موفقیت کپی شد')
+      // Toast.show({
+      //   type: "info",
+      //   text1:
+      // });
+
+
+  } catch (err) {
+    console.error('Failed to copy text: ', err);
+    Alert.alert('خطا', 'خطا در کپی کردن متن');
+  }
+};
 
   const fetchHistory = async () => {
     try {
@@ -262,7 +298,9 @@ const DynamicForm = ({ ModelFormData, ModelPageData, ParentSideMenuState, ParenH
 
     if (formData?.fields) {
       formData.fields.forEach(field => {
-        if (field.is_req && !formValues[field.name]) {
+        console.log("filed ---> ", field)
+        if (field.is_req && !formValues[field.name] && !field.name=="chat-ai") {
+          // Alert.alert("",formValues[field.name])
           newErrors[field.name] = field.error_msg || 'این فیلد الزامی است';
           isValid = false;
         }
@@ -405,7 +443,14 @@ const DynamicForm = ({ ModelFormData, ModelPageData, ParentSideMenuState, ParenH
     } catch (error) {
       setIsLoadingBtn(false);
       console.log("err in submit", error.response)
-      Alert.alert('خطا', error.response?.data?.message || 'خطا در ارسال فرم');
+      // Alert.alert('خطا', error.response?.data?.message || 'خطا در ارسال فرم');
+      // showToastWithGravity(error.response?.data?.message)
+      Toast.show({
+      type: 'error',
+      swipeable:'true',
+      position:'bottom',
+      text1: error.response?.data?.message
+    })
       setSubmitStatus("error");
       
       if (error.response?.data) {
@@ -1058,7 +1103,7 @@ const DynamicForm = ({ ModelFormData, ModelPageData, ParentSideMenuState, ParenH
                       <meta name="viewport" content="width=device-width, initial-scale=1">
                       <style>
                         body { margin: 0; padding: 16px; font-family: Tahoma, Arial, sans-serif; }
-                        * { box-sizing: border-box; }
+                        * { box-sizing: border-box;  text-align:right }
                       </style>
                     </head>
                     <body>${llmResponse}</body>
@@ -1174,7 +1219,7 @@ const DynamicForm = ({ ModelFormData, ModelPageData, ParentSideMenuState, ParenH
                       <meta name="viewport" content="width=device-width, initial-scale=1">
                       <style>
                         body { margin: 0; padding: 16px; font-family: Tahoma, Arial, sans-serif; }
-                        * { box-sizing: border-box; }
+                        * { box-sizing: border-box; text-align:center }
                       </style>
                     </head>
                     <body dir="rtl">${ModelPageData.pageInfo.content}</body>
@@ -1193,6 +1238,7 @@ const DynamicForm = ({ ModelFormData, ModelPageData, ParentSideMenuState, ParenH
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+      <Toast style={{direction:'rtl'}} />
     </SafeAreaView>
   );
 };
@@ -1500,7 +1546,7 @@ fieldContainer: {
     fontSize: 12,
   },
   copyButtonLarge: {
-    backgroundColor: '#1976d2',
+    backgroundColor: '#ccc',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1509,7 +1555,7 @@ fieldContainer: {
     marginTop: 16,
   },
   copyButtonLargeText: {
-    color: '#fff',
+    color: '#000',
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
@@ -1524,7 +1570,7 @@ fieldContainer: {
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 24,
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
@@ -1538,7 +1584,7 @@ fieldContainer: {
     color: '#fff',
   },
   sendButton: {
-    backgroundColor: '#1976d2',
+    backgroundColor: '#000',
     width: 50,
     height: 50,
     borderRadius: 25,
@@ -1619,6 +1665,8 @@ const markdownStyles = {
     color: '#333',
     fontSize: 16,
     lineHeight: 24,
+    textAlign:'right',
+    direction:'rtl'
   },
   heading1: {
     fontSize: 24,

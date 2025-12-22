@@ -153,6 +153,8 @@ export default function ModelsScreen() {
   };
 
   const handleSetIsOpenSidebar = () => {
+    // Alert.alert(isOpenSideMenu)
+    // Alert.alert("run func",String(isOpenSideMenu))
     setIsOpenSideMenu(!isOpenSideMenu);
   };
 
@@ -189,6 +191,7 @@ export default function ModelsScreen() {
 
   const ParentGetIsMenuOpen = (isOpen) => {
     setIsOpenMenu(isOpen);
+    // Alert.alert(isOpen)
   };
 
   // استایل‌های مشترک

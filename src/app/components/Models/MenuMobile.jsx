@@ -273,7 +273,28 @@ export default function MobileMenu({ ParentSetIsOpenSideMen }) {
     if (!activeFilter || !groupedMenuData) return null;
 
     const categoryEntries = Object.entries(groupedMenuData);
-    
+ 
+    const MenuItemIcon = ({ uri, index }) => {
+      const [visible, setVisible] = useState(false);
+
+      useEffect(() => {
+        const t = setTimeout(() => setVisible(true), index * 150); // هر آیتم با تأخیر ۵۰ms
+        return () => clearTimeout(t);
+      }, [index]);
+
+      if (!visible) {
+        return <View style={{ width: 30, height: 30, borderRadius: 6 }} />;
+      }
+
+      return (
+        <SvgUri
+          width="100%"
+          height="100%"
+          uri={uri}
+        />
+      );
+    };    
+
     return (
       <ScrollView 
         style={styles.subMenuContent}
@@ -300,11 +321,14 @@ export default function MobileMenu({ ParentSetIsOpenSideMen }) {
                         style={styles.itemImage}
                         defaultSource={require('../../../../assets/home/chatgpt.png')}
                       /> */}
-                        <SvgUri
+                        {/* <SvgUri
                           width="100%"
                           height="100%"
                           uri={item.icon}
-                        />
+                        /> */}
+                      {/* <View style={styles.itemImageContainer}> */}
+                        <MenuItemIcon uri={item.icon} index={index} />
+                      {/* </View> */}
                     </View>
                     <View style={styles.itemTextContainer}>
                       <Text style={styles.itemTitle} numberOfLines={1}>
@@ -551,7 +575,14 @@ export default function MobileMenu({ ParentSetIsOpenSideMen }) {
 
         <TouchableOpacity
           style={styles.menuButton}
-          onPress={() => ParentSetIsOpenSideMen()}
+          onPress={() => {ParentSetIsOpenSideMen()}}
+          delayPressIn={0}
+          hitSlop={{ // افزایش ناحیه لمسی (ترجیحاً این یکی)
+              top: 20,
+              left: 20,
+              bottom: 20,
+              right: 20
+          }}
         >
           {/* <Icon name="menu" size={24} color="#fff" style={styles.menuIcon} /> */}
           <MenuSvg  style={styles.menuIcon} />

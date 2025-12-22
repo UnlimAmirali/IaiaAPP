@@ -28,13 +28,14 @@ export default function MenuTop({ modelType, ParentGetIsMenuOpen, ParentSetIsOpe
   const navigation = useNavigation();
   const storage = new createMMKV();
   const fetchDataProfile = async () => {
+    return;
     try {
       // const token = await AsyncStorage.getItem("token") || "";
       const token  = storage.getString('token');
       const config = token ? { headers: { 'Authorization': token } } : {};
       
       const response = await axios.get(
-        `${process.env.EXPO_PUBLIC_API_BASE_URL}/dashboard/?lang=fa&style=dark`,
+        `${apiUrl}/dashboard/?lang=fa&style=dark`,
         config
       );
 

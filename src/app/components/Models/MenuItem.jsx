@@ -234,7 +234,14 @@ export default function MenuItem({ onMenuToggle, isMenuOpenParent, modelType }) 
                 <TouchableOpacity 
                     key={filter}
                     style={styles.button}
-                    onPress={() => toggleMenu(filter)}
+                    onPress={() =>{ toggleMenu(filter) }}
+                    delayPressIn={0}
+                    hitSlop={{ // افزایش ناحیه لمسی (ترجیحاً این یکی)
+                        top: 20,
+                        left: 20,
+                        bottom: 20,
+                        right: 20
+                    }}
                 >
                     <View style={[
                         styles.buttonImageContainer,
@@ -458,43 +465,6 @@ export default function MenuItem({ onMenuToggle, isMenuOpenParent, modelType }) 
     });
 
     return (
-        <View style={styles.container}>
-            {renderButtons()}
-
-            <Modal
-                visible={isMenuOpen}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={() => {
-                    setIsMenuOpen(false);
-                    if (onMenuToggle) onMenuToggle(false);
-                }}
-            >
-                <TouchableOpacity 
-                    style={styles.overlay}
-                    activeOpacity={1}
-                    onPress={() => {
-                        setIsMenuOpen(false);
-                        if (onMenuToggle) onMenuToggle(false);
-                    }}
-                >
-                    <View style={styles.menuModal}>
-                        {isLoading ? (
-                            <View style={styles.loadingContainer}>
-                                <ActivityIndicator 
-                                    size="large" 
-                                    color={isDarkMode ? "#fff" : "#000"} 
-                                />
-                                <Text style={{ color: isDarkMode ? "#fff" : "#000", marginTop: 10 }}>
-                                    Loading...
-                                </Text>
-                            </View>
-                        ) : (
-                            activeFilter && renderMenuContent(activeFilter)
-                        )}
-                    </View>
-                </TouchableOpacity>
-            </Modal>
-        </View>
+""
     );
 }

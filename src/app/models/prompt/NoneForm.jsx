@@ -38,6 +38,8 @@ import Toast from "react-native-toast-message";
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import { pick, types ,saveDocuments } from '@react-native-documents/picker'
 
+import MenuTop from '../../components/Models/MenuTopMobile'
+
 const { width, height } = Dimensions.get("window");
 const storage = new createMMKV();
 const apiUrl = Config.API_URL;
@@ -90,25 +92,30 @@ const BubbleComponent = ({ items }) => {
 };
 
 // کامپوننت SideMenuMobile
-const SideMenuMobile = ({ children, isDarkMode, setMobileHistoryMenu }) => {
+const SideMenuMobile = ({ children, isDarkMode, setMobileHistoryMenu, ParenHandleSideBar }) => {
   return (
+    <View style={{direction:'rtl', backgroundColor:'#000', width:'100%'}} >
     <Modal
      animationType="fade" transparent={true} visible={true} 
     //  onDismiss={() => setMobileHistoryMenu(false)}
-     onRequestClose={() => setMobileHistoryMenu(false)}
+    //  style={[styles.sideMenuParent]}
+     onRequestClose={() => ParenHandleSideBar()}
      >
 
-        <TouchableWithoutFeedback 
+        {/* <TouchableWithoutFeedback 
           onPress={() => setModalVisible(false)}>
           <View style={styles.backdrop} />
-        </TouchableWithoutFeedback>
-      <View style={[styles.sideMenuContainer, isDarkMode ? styles.darkBg : styles.lightBg]}>
-        <TouchableOpacity style={styles.closeButton} onPress={() => setMobileHistoryMenu(false)}>
+        </TouchableWithoutFeedback> */}
+      <View style={[styles.sideMenuContainer]}>
+        <TouchableOpacity style={styles.closeButton} onPress={() => ParenHandleSideBar()}>
           <Icon name="close" size={30} color={isDarkMode ? "#fff" : "#000"} />
         </TouchableOpacity>
+        <View style={[styles.historyParent]}>
         <ScrollView>{children}</ScrollView>
+        </View>
       </View>
     </Modal>
+    </View>
   );
 };
 
@@ -155,18 +162,41 @@ export default function RegularModel({ ModelPageData, ParentSideMenuState, Paren
   const [isDarkMode, setIsDarkMode] = useState(false);
   const scrollViewRef = useRef();
 
+
+
+    const MenuItemIcon = ({ uri, index }) => {
+      const [visible, setVisible] = useState(false);
+
+      useEffect(() => {
+        const t = setTimeout(() => setVisible(true), index * 50); // هر آیتم با تأخیر ۵۰ms
+        return () => clearTimeout(t);
+      }, [index]);
+
+      if (!visible) {
+        return <View style={{ width: 30, height: 30, borderRadius: 6 }} />;
+      }
+
+      return (
+        <SvgUri
+          width="100%"
+          height="100%"
+          uri={uri}
+        />
+      );
+    };  
   useEffect(() => {
-    // storage.set("token", "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VySUQiOjE0NzA4OSwidXNlck1haWwiOiIiLCJ1c2VyU3RhdHVzIjoxLCJ1c2VyRGlzcGxheU5hbWUiOiJhbWlyYWxpIG1haGRhdmkiLCJwYXNza2V5IjoiJDJ5JDEwJGpKUGtaY3M0OEY1Tkw1YlM2MlVSRS5YQzc2TzAzQ1Jya0p6VWFyQi9Qd2Rqb0tMZXk0QXNHIn0.Dy4DpDVbW5Mg1kiVz0qWumCDgyVxshVBmhuietwqQtI")
-    // storage.set("uid", "147089")
+
     if (!ModelPageData) return;
     // AsyncStorage.getItem("profileChat").then((url) => setAvatar(url));
     let url  = storage.getString("profileChat");
     let profile  = storage.getString("profile");
-    let prf = JSON.parse(profile)
-    console.log("user profile" ,prf['user_info']['user_img'])
-    console.log("user profile" ,profile)
-    if(prf['user_info']['user_img']){
-      setAvatar(prf['user_info']['user_img'])
+    if(profile){
+      let prf = JSON.parse(profile)
+      console.log("user profile" ,prf['user_info']['user_img'])
+      console.log("user profile" ,profile)
+      if(prf['user_info']['user_img']){
+        setAvatar(prf['user_info']['user_img'])
+      }
     }
 
   }, []);
@@ -736,35 +766,16 @@ const handleStreamReader = async (responseData) => {
         <SideMenuMobile
           isDarkMode={isDarkMode}
           setMobileHistoryMenu={setMobileHistoryMenu}
+          ParenHandleSideBar={ParenHandleSideBar}
         >
+        <View>
           {renderSideBarHistory()}
-        <Text>asdasdasd</Text>
+        </View>
         </SideMenuMobile>
       )}
 
       
 
-      {/* Sidebar (در دسکتاپ) - در موبایل مخفی */}
-      {Platform.OS === "web" && (
-        <View
-          style={[
-            styles.sidebar,
-            isSidebarCollapsed ? styles.sidebarCollapsed : styles.sidebarExpanded,
-            isDarkMode ? styles.darkSidebar : styles.lightSidebar,
-          ]}
-        >
-          <TouchableOpacity onPress={() => setIsSidebarCollapsed(!isSidebarCollapsed)} style={styles.sidebarToggle}>
-            {isSidebarCollapsed ? (
-              <FontAwesome6 name="arrow-left" size={20} color={isDarkMode ? "#fff" : "#000"} />
-            ) : (
-              <MaterialIcons name="menu" size={24} color={isDarkMode ? "#fff" : "#000"} />
-            )}
-          </TouchableOpacity>
-          {!isSidebarCollapsed && (
-            <ScrollView style={styles.sidebarHistory}>{renderSideBarHistory()}</ScrollView>
-          )}
-        </View>
-      )}
 
       {/* محتوای اصلی چت */}
       <View style={[styles.mainContent, isSidebarCollapsed ? styles.mainContentExpanded : {}]}>
@@ -1110,7 +1121,7 @@ const handleStreamReader = async (responseData) => {
         numColumns={3} // برای شبکه‌ای نمایش
         columnWrapperStyle={styles.llmGrid}
         initialNumToRender={10}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
         
           <TouchableOpacity 
             key={item.id} 
@@ -1127,11 +1138,12 @@ const handleStreamReader = async (responseData) => {
             /> */}
            
             <View style={styles.svgContainer} >
-                <SvgUri
+                {/* <SvgUri
                 width="100%"
                 // height="100%"
             
-                uri={item.img_url || selectedLLM.img_url}/>
+                uri={item.img_url || selectedLLM.img_url}/> */}
+                 <MenuItemIcon uri={item.img_url} index={index} />
               </View>
             <Text 
               style={styles.llmTitle}
@@ -1201,6 +1213,7 @@ const styles = StyleSheet.create({
   lightSidebar: { backgroundColor: "#e0e0e0" },
   sidebarToggle: { padding: 10, alignSelf: "flex-end" },
   sidebarHistory: { marginTop: 20 },
+  historyParent:{flexShrink:1,height:'70%',marginTop:'60', borderTopColor:'#000', borderTopWidth:1, borderBottomWidth:1, paddingVertical:10},
   mainContent: { flex: 1, marginLeft: Platform.OS === "web" ? 250 : 0 },
   mainContentExpanded: { marginLeft: Platform.OS === "web" ? 60 : 0 },
   chatContainer: { flex: 1, paddingTop:40, paddingBottom:400,marginBottom:20, },
@@ -1371,7 +1384,8 @@ const styles = StyleSheet.create({
   selectedHistoryButton: { backgroundColor: "#888", color:"#FFF" },
   historyText: { color: "#000" },
   deleteButton: { padding: 5 },
-  sideMenuContainer: { flex: 1, paddingTop: 50, width:'70%', direction:'rtl' },
+  sideMenuParent:{flex: 1, width:'100%', backgroundColor:'#000'},
+  sideMenuContainer: { flex: 1, paddingTop: 50, width:'70%', direction:'rtl', backgroundColor:"#FFF" },
   filePicker:{flex:1, paddingTop:50, height:'20%'},
   darkBg: { backgroundColor: "#000" },
   lightBg: { backgroundColor: "#fff" },
