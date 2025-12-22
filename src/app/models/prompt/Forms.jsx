@@ -38,6 +38,9 @@ import Toast from "react-native-toast-message";
 // Initialize MMKV
 const storage = new createMMKV();
 const apiUrl = Config.API_URL;
+const refererUrl = Config.Referer_URL;
+const hostUrl = Config.Host_URL;
+const Host_for_strem = Config.Host_for_strem;
 const lngs = [
   'javascript',
   'typescript',
@@ -192,7 +195,7 @@ const handleCopy = async (text) => {
 
 
   } catch (err) {
-    console.error('Failed to copy text: ', err);
+    // console.error('Failed to copy text: ', err);
     Alert.alert('خطا', 'خطا در کپی کردن متن');
   }
 };
@@ -214,7 +217,7 @@ const handleCopy = async (text) => {
         setHistory(response.data.data.history);
       }
     } catch (error) {
-      console.error("Error fetching history:", error);
+      // console.error("Error fetching history:", error);
     }
   };
 
@@ -327,8 +330,8 @@ const handleCopy = async (text) => {
           method: "GET",
           headers: {
             Authorization: storage.getString("token") || "",
-            Referer: "https://test.irani-ai.com/",
-            Host: "api2.irani-ai.com",
+            Referer: refererUrl,
+            Host: hostUrl,
           },
         }
       );
@@ -410,8 +413,8 @@ const handleCopy = async (text) => {
         headers: {
           Authorization: `${token}`,
           ...(token ? { Authorization: `${token}` } : {}),
-          Referer: 'https://test.irani-ai.com/', // 
-          Host:"api2.irani-ai.com",
+          Referer: refererUrl, // 
+          Host:Host_for_strem,
           "Content-Type": "multipart/form-data",
         },
       });
@@ -522,7 +525,7 @@ const handleCopy = async (text) => {
         Alert.alert('موفق', 'تاریخچه با موفقیت حذف شد');
       }
     } catch (err) {
-      console.error('Error deleting history:', err);
+      // console.error('Error deleting history:', err);
       Alert.alert('خطا', 'خطا در حذف تاریخچه');
     }
   };
