@@ -18,8 +18,8 @@ export default function MainPrompt({ModelPageData, ModelFormData, onParanetMsg, 
   const renderPage = ()=>{
     
     //  console.log("in main" , ModelPageData)
-    
-    if(ModelFormData.length == 0 ){
+    // Alert.alert("alert", String(ModelFormData.length))
+    if(ModelFormData.length == 0 || ModelFormData.length == undefined ){
         return  <NoneForm 
             ModelPageData={ModelPageData} 
             ParentSideMenuState={ParentSideMenuState} 

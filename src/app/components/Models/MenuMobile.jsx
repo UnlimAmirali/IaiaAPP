@@ -41,6 +41,10 @@ export default function MobileMenu({ ParentSetIsOpenSideMen }) {
   const storage = new createMMKV();
 
   const apiUrl = Config.API_URL;
+  const refererUrl = Config.Referer_URL;
+  const hostUrl = Config.Host_URL; 
+  const stremUrl = Config.Host_for_strem
+
   const extractAllItems = useCallback((data) => {
     if (!data) return [];
     let items = [];
@@ -209,8 +213,8 @@ export default function MobileMenu({ ParentSetIsOpenSideMen }) {
           // Alert.alert("","in menu item")
           const headers = {
           ...(token ? { Authorization: token } : {}),
-          Referer: 'https://test.irani-ai.com/', // 
-          Host:"api2.irani-ai.com"
+          Referer: refererUrl, 
+          Host:stremUrl,
           // 'X-App-Referrer': 'HomeScreen', // 
 
           };

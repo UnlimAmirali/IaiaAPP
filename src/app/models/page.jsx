@@ -228,7 +228,7 @@ export default function ModelsScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={isDarkMode ? "#fff" : "#000"} />
+        <ActivityIndicator size="large" color={isDarkMode ? "#000" : "#000"} />
       </View>
     );
   }
