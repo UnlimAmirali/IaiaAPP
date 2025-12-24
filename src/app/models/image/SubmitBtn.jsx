@@ -18,7 +18,7 @@ export default function GlowButton({ isLoading = false, onPress, children = "س�
   // حرکت مداوم - از 0 تا 1 (یک دور کامل)
   const translateX = anim.interpolate({
     inputRange: [0, 1],
-    outputRange: [-600, 600] // کل عرض گرادیان را طی می‌کند
+    outputRange: [-220, 220] // کل عرض گرادیان را طی می‌کند
   });
 
   return (
@@ -49,15 +49,17 @@ export default function GlowButton({ isLoading = false, onPress, children = "س�
             styles.gradientAnimated,
             { 
               transform: [{ translateX }],
-              left: -600 // دقیقاً پشت سر گرادیان اول
+              left: -300 // دقیقاً پشت سر گرادیان اول
             }
           ]}
         >
           <LinearGradient
             colors={[
-              "#ff0000", "#ff7300", "#fffb00",
               "#48ff00", "#00ffd5", "#002bff",
-              "#7a00ff", "#ff00c8", "#ff0000"
+              "#7a00ff", "#ff00c8", "#ff0000",
+              "#ff0000", "#ff7300", "#fffb00",
+              
+              
             ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
