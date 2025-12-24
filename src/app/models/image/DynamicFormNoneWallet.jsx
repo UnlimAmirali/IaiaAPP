@@ -33,6 +33,9 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import GlowButton from './SubmitBtn'
+import RTLPicker from '../../components/Models/CustomePicker';
+import Config from 'react-native-config';
+
 
 // Initialize MMKV
 const storage = new createMMKV();
@@ -53,10 +56,42 @@ const DynamicForm = ({ ModelFormData, ModelPageData }) => {
   const [showAllOptions, setShowAllOptions] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [improPromptLoading, setImproPromptLoading] = useState(0);
+  const [showAll, setShowAll] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   
   const navigation = useNavigation();
   const scrollViewRef = useRef(null);
-  
+
+  const apiUrl = Config.API_URL;
+  const refererUrl = Config.Referer_URL;
+  const hostUrl = Config.Host_URL;
+  const Host_for_strem = Config.Host_for_strem;  
+
+   const toggleSelection = (value) => {
+    setSelectedValues(prev => {
+      // اگر قبلا انتخاب شده بود، آن را بردار
+      if (prev[value]) {
+        const newState = {...prev};
+        // delete newState[value];
+        return newState;
+      } 
+      // در غیر این صورت اضافه کن
+      else {
+        return { [value]: true};
+      }
+    });
+  };
+
+
+  const handleChangeCustom = (nm,value) => {
+
+  setFormValues({
+    ...formValues, 
+    [nm]:value,
+  })
+  console.log("in handle change custom--->" , formValues)
+}
+
   // Initialize form data
   useEffect(() => {
     if (ModelFormData) {
@@ -188,18 +223,22 @@ const DynamicForm = ({ ModelFormData, ModelPageData }) => {
         navigation.navigate('Login');
         return;
       }
-      
+      console.log("prompt",formValues.prompt)
       const response = await axios.post(
-        `${process.env.API_BASE_URL}/response/improveprompt/`,
+        `${apiUrl}/response/improveprompt/`,
         {
           type: "image",
           prompt: formValues.prompt
         },
         {
           headers: {
+            Authorization: storage.getString("token") || "",
             "Content-Type": "application/json",
-            "Authorization": token,
+            Referer: refererUrl,
+            // Host: hostUrl,
           },
+             baseURL: hostUrl,
+          
         }
       );
       
@@ -214,7 +253,7 @@ const DynamicForm = ({ ModelFormData, ModelPageData }) => {
       
     } catch (error) {
       setImproPromptLoading(0);
-      
+      console.log("err resp ", error.response)
       if (error.response?.status === 403) {
         navigation.navigate('Login');
       } else {
@@ -270,15 +309,18 @@ const DynamicForm = ({ ModelFormData, ModelPageData }) => {
       });
       
       formDataToSend.append("page-id", ModelPageData.page_id);
-      
+      console.log("form Data" , formDataToSend)
       const response = await axios({
         method: formData?.form_method || 'POST',
-        url: `${process.env.API_BASE_URL}/response/images/${formData?.form_slug}/`,
+        url: `${apiUrl}/response/images/${formData?.form_slug}/?lang=fa&style=dark`,
         data: formDataToSend,
         headers: {
           "Content-Type": "multipart/form-data",
           "Authorization": token,
-        },
+           Referer: refererUrl,
+            // Host: hostUrl,
+          },
+            baseURL: hostUrl,
       });
       
       if (response.data.data) {
@@ -296,7 +338,7 @@ const DynamicForm = ({ ModelFormData, ModelPageData }) => {
       }
       
     } catch (error) {
-      console.error('Submission error:', error);
+      console.log('Submission error:', error.response);
       
       if (error.response?.status === 403) {
         navigation.navigate('Login');
@@ -320,7 +362,7 @@ const DynamicForm = ({ ModelFormData, ModelPageData }) => {
     const intervalId = setInterval(async () => {
       try {
         const response = await axios.post(
-          `${process.env.API_BASE_URL}/response/tasks/`,
+          `${apiUrl}/response/tasks/`,
           {
             task_id: taskId,
             res_id: resId,
@@ -329,10 +371,40 @@ const DynamicForm = ({ ModelFormData, ModelPageData }) => {
             headers: {
               "Content-Type": "application/json",
               "Authorization": token,
+               Referer: refererUrl,
             },
+            baseURL:hostUrl
           }
         );
-        
+        console.log("in poolig" , response.data.data)
+         if(response.data.data?.type && response.data.data?.output){
+          clearInterval(intervalId);
+          setDataOutput({
+            output: response.data.data.output,
+            type: response.data.data.type,
+          });
+          setIsLoading(false);
+          
+          Toast.show({
+            type: 'success',
+            text1: 'موفق',
+            text2: 'نتیجه آماده شد',
+          });
+        }       
+        if(response.data.data?.status === 1){
+          clearInterval(intervalId);
+          // setDataOutput({
+          //   output: response.data.data.output,
+          //   type: response.data.data.type,
+          // });
+          // setIsLoading(false);
+          
+          Toast.show({
+            type: 'error',
+            text1: 'ناموفق',
+            text2: 'در پردازش مشکلی پیش آمده لطفا بعدا تلاش کنید ',
+          });
+        }
         if (response.data.data?.status === 2) {
           clearInterval(intervalId);
           setDataOutput({
@@ -393,7 +465,63 @@ const DynamicForm = ({ ModelFormData, ModelPageData }) => {
             )}
           </View>
         );
+      case 'radio-query':
+          const displayedOptions = showAll 
+            ? [...field.settings].reverse()
+            : field.settings?.slice(0, 6).reverse();
 
+          return (
+            <View key={field.name} style={styles.radioQueryContainer}>
+              <Text style={[styles.radioQueryLabel, isDarkMode && styles.darkText]}>
+                {field.label}
+                {field.is_req === 1 && <Text style={styles.requiredStar}> *</Text>}
+              </Text>
+
+              <FlatList
+                data={displayedOptions}
+                numColumns={3}
+                keyExtractor={(item) => item.value.toString()}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[
+                      styles.radioQueryItem,
+                      selectedValues[item.value] && [
+                        styles.radioQueryItemSelected,
+                        isDarkMode && styles.darkRadioQueryItemSelected,
+                      ],
+                    ]}
+                    onPress={() => {
+                      toggleSelection(item.value);
+                      handleChangeCustom(field.name, item.value);
+                    }}
+                  >
+                    <Image
+                      source={{ uri: item.img_url }}
+                      style={styles.radioQueryImage}
+                    />
+                    <View style={styles.radioQueryLabelContainer}>
+                      <Text style={styles.radioQueryItemLabel}>{item.label}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              />
+
+              {field.settings?.length > 6 && (
+                <TouchableOpacity
+                  onPress={() => setShowAll(!showAll)}
+                  style={styles.showMoreButton}
+                >
+                  <Text style={styles.showMoreText}>
+                    {showAll ? 'بستن' : 'بیشتر'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {errors[field.name] && (
+                <Text style={styles.errorText}>{errors[field.name]}</Text>
+              )}
+            </View>
+          );
       case 'file':
         return (
           <View style={styles.fieldContainer} key={field.name}>
@@ -590,11 +718,21 @@ const DynamicForm = ({ ModelFormData, ModelPageData }) => {
             {field.is_req === 1 && <Text style={styles.requiredStar}> *</Text>}
           </Text>
           
-          <View style={styles.pickerContainer}>
-            <Picker
+          <View>
+            {/* <Picker
               selectedValue={formValues[field.name] || ''}
               onValueChange={(itemValue) => handleChange(field.name, itemValue)}
-              style={styles.picker}
+              // style={styles.picker}
+                style={{
+                  writingDirection: 'rtl', // مهم
+                  // Android همیشه دقیق رعایت نمی‌کند
+                }}
+                itemStyle={{
+                  writingDirection: 'rtl',
+                  textAlign: 'right',
+                }}
+
+
             >
               <Picker.Item label="انتخاب کنید..." value="" />
               {field.settings?.map((option) => (
@@ -604,7 +742,17 @@ const DynamicForm = ({ ModelFormData, ModelPageData }) => {
                   value={option.value}
                 />
               ))}
-            </Picker>
+            </Picker> */}
+
+            <RTLPicker
+              selectedValue={formValues[field.name] || ''}
+              onValueChange={(value) => handleChange(field.name, value)}
+              options={field.settings}
+              placeholder="انتخاب کنید..."
+              label=""
+            />
+
+
           </View>
         </View>
       );
@@ -763,26 +911,11 @@ const DynamicForm = ({ ModelFormData, ModelPageData }) => {
           <Text style={styles.pageTitle}>{ModelPageData.pageInfo.title}</Text>
         )}
         
-        <View style={styles.formContainer}>
+        <View  style={styles.formContainer}>
           {formData?.fields.map((field) => renderField(field))}
         </View>
         
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (isLoading || isSubmitting) && styles.submitButtonDisabled,
-          ]}
-          onPress={handleSubmit}
-          disabled={isLoading || isSubmitting}
-        >
-        
-          {isLoading || isSubmitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <GlowButton />
-       
-          )}
-        </TouchableOpacity>
+
         
         {ModelPageData?.total_file_count !== -1 && 
          ModelPageData?.total_file_count !== 0 && (
@@ -799,6 +932,18 @@ const DynamicForm = ({ ModelFormData, ModelPageData }) => {
             <Text style={styles.loadingText}>در حال پردازش دستور شما هستیم</Text>
           </View>
         )}
+
+        <TouchableOpacity
+          style={[
+            styles.submitButton,
+          ]}
+          onPress={handleSubmit}
+          disabled={isLoading || isSubmitting}
+        >
+        
+          <GlowButton onPress={handleSubmit} />
+        </TouchableOpacity>
+
         
         {renderOutput()}
         
@@ -912,6 +1057,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   formContainer: {
+    direction:'rtl',
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
@@ -1023,8 +1169,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   selectedGridItem: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#00000',
     borderColor: '#007AFF',
+    direction:'rtl'
   },
   gridItemText: {
     color: '#333',
@@ -1032,7 +1179,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   selectedGridItemText: {
-    color: '#fff',
+    color: '#000',
     fontWeight: 'bold',
   },
   pickerContainer: {
@@ -1041,10 +1188,15 @@ const styles = StyleSheet.create({
     borderColor: '#dee2e6',
     borderRadius: 8,
     overflow: 'hidden',
+    direction:'rtl',
+    textAlign:'center'
   },
   picker: {
     height: 50,
-    color: '#333',
+    color: '#000',
+    direction:'rtl',
+    textAlign:'right',
+    writingDirection: 'rtl'
   },
   textareaContainer: {
     position: 'relative',
@@ -1073,7 +1225,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   submitButton: {
-    backgroundColor: '',
+
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -1081,7 +1233,7 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   submitButtonDisabled: {
-    backgroundColor: '#999',
+    
   },
   submitButtonText: {
     color: '#fff',
@@ -1259,6 +1411,68 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
+
+
+
+radioQueryContainer: {
+    marginBottom: 16,
+
+  },
+  radioQueryLabel: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#00',
+  },
+  radioQueryItem: {
+    flex: 1,
+    maxWidth:'30%',
+    margin: 4,
+    borderWidth: 2,
+    borderColor: '#cbd6dd',
+    borderRadius: 8,
+    padding: 8,
+    alignItems: 'center',
+  },
+  radioQueryItemSelected: {
+    borderColor: '#007AFF',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  darkRadioQueryItemSelected: {
+    borderColor: '#000',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+  },
+  radioQueryImage: {
+    width: '100%',
+    height: 80,
+    borderRadius: 4,
+  },
+  radioQueryLabelContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#000",
+    // 'rgba(0, 0, 0, 0.5)',
+    paddingVertical: 4,
+    borderBottomLeftRadius: 4,
+    borderBottomRightRadius: 4,
+  },
+  radioQueryItemLabel: {
+    fontSize: 10,
+    textAlign: 'center',
+    color: '#fff',
+  },
+  showMoreButton: {
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  showMoreText: {
+    color: '#3b82f6',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+
 });
 
 export default DynamicForm;
