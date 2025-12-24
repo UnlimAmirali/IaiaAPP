@@ -17,6 +17,7 @@ import {
   Easing,
   TouchableWithoutFeedback
 } from "react-native";
+import EventSource from "react-native-sse";
 import { Keyboard } from 'react-native';
 import Config from 'react-native-config';
 import { FlatList } from "react-native";
@@ -564,63 +565,276 @@ export default function RegularModel({ ModelPageData, ParentSideMenuState, Paren
     setMessages([]);
   };
 
-const handleStreamReader = async (responseData) => {
-  if (!responseData) return;
-  console.log("in handle strem")
-  setIsLoading(true);
-  // return;
+// const handleStreamReader = async (responseData) => {
+//   if (!responseData) return;
+//   console.log("in handle strem")
+//   setIsLoading(true);
+//   // return;
 
-  try {
-    let { stream_url, task_id, "chat-id": chatID, uid, "page-id": pageID } = responseData;
-  console.log(`${apiUrl}/gpu.php?task=${stream_url}&task-id=${task_id}&id=${chatID}&user=${uid}&page=${pageID}&lang=fa`);
+//   try {
+//     let { stream_url, task_id, "chat-id": chatID, uid, "page-id": pageID } = responseData;
+//   console.log(`${apiUrl}/gpu.php?task=${stream_url}&task-id=${task_id}&id=${chatID}&user=${uid}&page=${pageID}&lang=fa`);
 
 
-    storage.set("free_chat_id", chatID.toString());
-    console.log("")
-    const response = await fetch(
-      `${apiUrl}/gpu.php?task=${stream_url}&task-id=${task_id}&id=${chatID}&user=${uid}&page=${pageID}&lang=fa`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: storage.getString("token") || "",
-          Referer: "https://test.irani-ai.com/",
-          Host: "api2.irani-ai.com",
-        },
-      }
-    );
+//     storage.set("free_chat_id", chatID.toString());
+//     console.log("")
+//     const response = await fetch(
+//       `${apiUrl}/gpu.php?task=${stream_url}&task-id=${task_id}&id=${chatID}&user=${uid}&page=${pageID}&lang=fa`,
+//       {
+//         method: "GET",
+//         headers: {
+//           Authorization: storage.getString("token") || "",
+//           Referer: "https://test.irani-ai.com/",
+//           Host: "api2.irani-ai.com",
+//         },
+//       }
+//     );
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+//     if (!response.ok) {
+//       throw new Error(`HTTP error! status: ${response.status}`);
+//     }
+
+//     const responseText = await response.text();
+
+//     const botMessageId = Date.now();
+//     setMessages((prev) => [
+//       ...prev,
+//       {
+//         id: botMessageId,
+//         sender: "bot",
+//         content: responseText,
+//         timestamp: new Date().toLocaleTimeString(),
+//         lang: "fa",
+//       },
+//     ]);
+
+//     setButnSubmit(false);
+//   } catch (error) {
+//     console.log("Error:", error);
+//     Toast.hide();
+//     setButnSubmit(false);
+//   } finally {
+//     setIsLoading(false);
+//   }
+// };
+
+const sseRef = useRef(null);
+const activeTaskRef = useRef(null);
+
+useEffect(() => {
+  return () => {
+    console.log("[SSE] cleanup: closing connection");
+    try {
+      sseRef.current?.close();
+    } catch (e) {
+      console.log("[SSE] cleanup close error:", e?.message || e);
     }
+    sseRef.current = null;
+    activeTaskRef.current = null;
+  };
+}, []);
 
-    const responseText = await response.text();
+const streamingMsgIdRef = useRef(null);
+const streamBufferRef = useRef("");
+const flushTimerRef = useRef(null);
 
-    const botMessageId = Date.now();
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: botMessageId,
-        sender: "bot",
-        content: responseText,
-        timestamp: new Date().toLocaleTimeString(),
-        lang: "fa",
-      },
-    ]);
-
-    setButnSubmit(false);
-  } catch (error) {
-    console.log("Error:", error);
-    Toast.hide();
-    setButnSubmit(false);
-  } finally {
-    setIsLoading(false);
+// تابع برای به روز رسانی پیام با داده‌های بافر
+const scheduleFlush = () => {
+  if (flushTimerRef.current) {
+    clearTimeout(flushTimerRef.current);
   }
+  
+  flushTimerRef.current = setTimeout(() => {
+    if (streamBufferRef.current && streamingMsgIdRef.current) {
+      const content = streamBufferRef.current;
+      const id = streamingMsgIdRef.current;
+      
+      setMessages(prev =>
+        prev.map(m => 
+          m.id === id 
+            ? { ...m, content: m.content + content } 
+            : m
+        )
+      );
+      
+      // پاک کردن بافر پس از استفاده
+      streamBufferRef.current = "";
+    }
+  }, 50); // تأخیر 50ms برای بهینه‌سازی رندر
 };
 
+const handleStreamReader = async (responseData) => {
+  if (!responseData) return;
 
+  const { stream_url, task_id, "chat-id": chatID, uid, "page-id": pageID } = responseData;
 
+  if (activeTaskRef.current === task_id) return;
+  activeTaskRef.current = task_id;
 
- 
+  const url =
+    `${apiUrl}/gpu-app.php` +
+    `?task=${encodeURIComponent(stream_url)}` +
+    `&task-id=${encodeURIComponent(task_id)}` +
+    `&id=${encodeURIComponent(chatID)}` +
+    `&user=${encodeURIComponent(uid)}` +
+    `&page=${encodeURIComponent(pageID)}` +
+    `&lang=fa`;
+
+  // بستن اتصال قبلی
+  if (sseRef.current) {
+    try { 
+      sseRef.current.close(); 
+    } catch (e) {
+      console.error("Error closing previous SSE:", e);
+    }
+    sseRef.current = null;
+  }
+
+  // ریست کردن بافرها
+  streamBufferRef.current = "";
+  if (flushTimerRef.current) {
+    clearTimeout(flushTimerRef.current);
+    flushTimerRef.current = null;
+  }
+
+  // ایجاد پیام جدید برای بات
+  const botMessageId = Date.now();
+  streamingMsgIdRef.current = botMessageId;
+
+  setMessages(prev => [
+    ...prev,
+    {
+      id: botMessageId,
+      sender: "bot",
+      content: "",
+      timestamp: new Date().toLocaleTimeString(),
+      lang: "fa",
+      isStreaming: true,
+    },
+  ]);
+
+  const token = storage.getString("token") || "";
+
+  sseRef.current = new EventSource(url, {
+    headers: {
+      Authorization: token,
+      Accept: "text/event-stream",
+      Referer: "https://test.irani-ai.com/",
+      Host: "api2.irani-ai.com",
+    },
+  });
+
+  sseRef.current.addEventListener("open", () => {
+    console.log("[SSE] open");
+  });
+
+  sseRef.current.addEventListener("message", (event) => {
+    const chunk = event?.data ?? "";
+    
+    // نادیده گرفتن chunk‌های خالی
+    if (!chunk || chunk.trim() === "") return;
+
+    if (chunk === "[DONE]" || chunk === "END") {
+      // تخلیه نهایی بافر قبل از بستن
+      if (streamBufferRef.current && streamingMsgIdRef.current) {
+        const content = streamBufferRef.current;
+        const id = streamingMsgIdRef.current;
+        
+        setMessages(prev =>
+          prev.map(m => 
+            m.id === id 
+              ? { ...m, content: m.content + content } 
+              : m
+          )
+        );
+        
+        streamBufferRef.current = "";
+      }
+
+      try { 
+        sseRef.current?.close(); 
+      } catch (e) {
+        console.error("Error closing SSE:", e);
+      }
+      
+      sseRef.current = null;
+      activeTaskRef.current = null;
+
+      const id = streamingMsgIdRef.current;
+      if (id) {
+        setMessages(prev =>
+          prev.map(m => 
+            m.id === id 
+              ? { ...m, isStreaming: false } 
+              : m
+          )
+        );
+      }
+
+      streamingMsgIdRef.current = null;
+      setButnSubmit(false);
+      
+      if (flushTimerRef.current) {
+        clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+      
+      return;
+    }
+
+    // اضافه کردن chunk به بافر و برنامه‌ریزی برای به روزرسانی
+    streamBufferRef.current += String(chunk);
+    console.log("Chunk received:", String(chunk));
+    scheduleFlush();
+  });
+
+  sseRef.current.addEventListener("error", (e) => {
+    console.log("[SSE] error:", e?.message || e);
+    
+    // تخلیه هر آنچه در بافر باقی مانده
+    if (streamBufferRef.current && streamingMsgIdRef.current) {
+      const content = streamBufferRef.current;
+      const id = streamingMsgIdRef.current;
+      
+      setMessages(prev =>
+        prev.map(m => 
+          m.id === id 
+            ? { ...m, content: m.content + content } 
+            : m
+        )
+      );
+      
+      streamBufferRef.current = "";
+    }
+    
+    try { 
+      sseRef.current?.close(); 
+    } catch (err) {
+      console.error("Error closing SSE on error:", err);
+    }
+    
+    sseRef.current = null;
+    activeTaskRef.current = null;
+
+    const id = streamingMsgIdRef.current;
+    if (id) {
+      setMessages(prev =>
+        prev.map(m => 
+          m.id === id 
+            ? { ...m, isStreaming: false } 
+            : m
+        )
+      );
+    }
+    
+    streamingMsgIdRef.current = null;
+    
+    if (flushTimerRef.current) {
+      clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = null;
+    }
+  });
+};
   const check_image_credit = async () => {
     try {
       const token = storage.getString("token")
@@ -738,7 +952,7 @@ const handleStreamReader = async (responseData) => {
         };
         try {
           await handleStreamReader(dt);
-          fetchHistory();
+          // fetchHistory();
         } catch (error) {
           // console.error("Error in handleStreamReader:", error);
         }
