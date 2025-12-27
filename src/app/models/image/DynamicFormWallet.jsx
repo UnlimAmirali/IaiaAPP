@@ -38,6 +38,8 @@ import History from './History';
 import Config from 'react-native-config';
 
 import SubmitBtn from './SubmitBtn';
+import RTLPicker from '../../components/Models/CustomePicker';
+
 // import LoadingButton from './LoadingBtn';
 // import SideMenuMobile from './SideMenuMobile';
 // import MenuTopMobile from './MenuTopMobile';
@@ -251,9 +253,12 @@ const DynamicFormWallet = ({
         },
         {
           headers: {
+            Authorization: storage.getString("token") || "",
             "Content-Type": "application/json",
-            "Authorization": token,
+            Referer: refererUrl,
+            // Host: hostUrl,
           },
+             baseURL: hostUrl,
         }
       );
       
@@ -363,7 +368,10 @@ const DynamicFormWallet = ({
         headers: {
           "Content-Type": "multipart/form-data",
           "Authorization": token,
-        },
+           Referer: refererUrl,
+            // Host: hostUrl,
+          },
+            baseURL: hostUrl,
       });
       
       if (response.data.data) {
@@ -396,7 +404,7 @@ const DynamicFormWallet = ({
       setFormValues(resetValues);
       
     } catch (error) {
-      console.error('Form submission error:', error);
+      console.log('Form submission error:', error);
       
       if (error.response?.status === 403) {
         navigation.navigate('Login');
@@ -425,16 +433,19 @@ const DynamicFormWallet = ({
       try {
         const token = storage.getString('token');
         const response = await axios.post(
-          `${process.env.API_BASE_URL}/response/tasks/`,
+          `${apiUrl}/response/tasks/`,
           {
             task_id: taskId,
             res_id: resId,
           },
           {
             headers: {
-              "Content-Type": "application/json",
+              "Content-Type": "multipart/form-data",
               "Authorization": token,
+              Referer: refererUrl,
+              // Host: hostUrl,
             },
+              baseURL: hostUrl,
           }
         );
         
@@ -670,18 +681,146 @@ const DynamicFormWallet = ({
             />
           </View>
         );
+      case 'radio':
+            if (field.name === "size" || field.name === "output-size" || field.name === "aspect_ratio") {
+              return (
+                <View style={styles.fieldContainer} key={field.name}>
+                  <Text style={styles.label}>
+                    {field.label}
+                    {field.is_req === 1 && <Text style={styles.requiredStar}> *</Text>}
+                  </Text>
+                  
+                  <View style={styles.gridContainer}>
+                    {field.settings?.map((option) => (
+                      <TouchableOpacity
+                        key={option.value}
+                        style={[
+                          styles.gridItem,
+                          formValues[field.name] === option.value && styles.selectedGridItem,
+                        ]}
+                        onPress={() => handleChange(field.name, option.value)}
+                      >
+                        <Text style={[
+                          styles.gridItemText,
+                          formValues[field.name] === option.value && styles.selectedGridItemText,
+                        ]}>
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              );
+            } else {
+              return (
+                <View style={styles.fieldContainer} key={field.name}>
+                  <Text style={styles.label}>
+                    {field.label}
+                    {field.is_req === 1 && <Text style={styles.requiredStar}> *</Text>}
+                  </Text>
+                  
+                  <View>
+                    {/* <Picker
+                      selectedValue={formValues[field.name] || ''}
+                      onValueChange={(itemValue) => handleChange(field.name, itemValue)}
+                      // style={styles.picker}
+                        style={{
+                          writingDirection: 'rtl', // مهم
+                          // Android همیشه دقیق رعایت نمی‌کند
+                        }}
+                        itemStyle={{
+                          writingDirection: 'rtl',
+                          textAlign: 'right',
+                        }}
 
+
+                    >
+                      <Picker.Item label="انتخاب کنید..." value="" />
+                      {field.settings?.map((option) => (
+                        <Picker.Item
+                          key={option.value}
+                          label={option.label}
+                          value={option.value}
+                        />
+                      ))}
+                    </Picker> */}
+
+                    <RTLPicker
+                      selectedValue={formValues[field.name] || ''}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      options={field.settings}
+                      placeholder="انتخاب کنید..."
+                      label=""
+                    />
+
+
+                  </View>
+                </View>
+              );
+            }        
+      case 'radio-query':
+          const displayedOptions = showAll 
+            ? [...field.settings].reverse()
+            : field.settings?.slice(0, 6).reverse();
+
+          return (
+            <View key={field.name} style={styles.radioQueryContainer}>
+              <Text style={[styles.radioQueryLabel, isDarkMode && styles.darkText]}>
+                {field.label}
+                {field.is_req === 1 && <Text style={styles.requiredStar}> *</Text>}
+              </Text>
+
+              <FlatList
+                data={displayedOptions}
+                numColumns={3}
+                keyExtractor={(item) => item.value.toString()}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[
+                      styles.radioQueryItem,
+                      selectedValues[item.value] && [
+                        styles.radioQueryItemSelected,
+                        isDarkMode && styles.darkRadioQueryItemSelected,
+                      ],
+                    ]}
+                    onPress={() => {
+                      toggleSelection(item.value);
+                      handleChangeCustom(field.name, item.value);
+                    }}
+                  >
+                    <Image
+                      source={{ uri: item.img_url }}
+                      style={styles.radioQueryImage}
+                    />
+                    <View style={styles.radioQueryLabelContainer}>
+                      <Text style={styles.radioQueryItemLabel}>{item.label}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              />
+
+              {field.settings?.length > 6 && (
+                <TouchableOpacity
+                  onPress={() => setShowAll(!showAll)}
+                  style={styles.showMoreButton}
+                >
+                  <Text style={styles.showMoreText}>
+                    {showAll ? 'بستن' : 'بیشتر'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {errors[field.name] && (
+                <Text style={styles.errorText}>{errors[field.name]}</Text>
+              )}
+            </View>
+          );
       default:
         return null;
     }
   };
-
   const renderSelectField = (field) => {
     if (field.name === "size" || field.name === "output-size" || field.name === "aspect_ratio") {
-      const options = field.settings || [];
-      const showAll = showAllOptions[field.name] || false;
-      const displayedOptions = showAll ? options : options.slice(0, 6);
-      
       return (
         <View style={styles.fieldContainer} key={field.name}>
           <Text style={styles.label}>
@@ -690,7 +829,7 @@ const DynamicFormWallet = ({
           </Text>
           
           <View style={styles.gridContainer}>
-            {displayedOptions.map((option) => (
+            {field.settings?.map((option) => (
               <TouchableOpacity
                 key={option.value}
                 style={[
@@ -705,29 +844,9 @@ const DynamicFormWallet = ({
                 ]}>
                   {option.label}
                 </Text>
-                {parseDimensions(option.label)}
               </TouchableOpacity>
             ))}
           </View>
-          
-          {options.length > 6 && (
-            <TouchableOpacity
-              style={styles.showMoreButton}
-              onPress={() => setShowAllOptions(prev => ({
-                ...prev,
-                [field.name]: !showAll
-              }))}
-            >
-              <Text style={styles.showMoreText}>
-                {showAll ? 'نمایش کمتر' : 'نمایش بیشتر'}
-              </Text>
-              <Icon 
-                name={showAll ? 'chevron-up' : 'chevron-down'} 
-                size={16} 
-                color="#007AFF" 
-              />
-            </TouchableOpacity>
-          )}
         </View>
       );
     } else {
@@ -738,11 +857,21 @@ const DynamicFormWallet = ({
             {field.is_req === 1 && <Text style={styles.requiredStar}> *</Text>}
           </Text>
           
-          <View style={styles.pickerContainer}>
-            <Picker
+          <View>
+            {/* <Picker
               selectedValue={formValues[field.name] || ''}
               onValueChange={(itemValue) => handleChange(field.name, itemValue)}
-              style={styles.picker}
+              // style={styles.picker}
+                style={{
+                  writingDirection: 'rtl', // مهم
+                  // Android همیشه دقیق رعایت نمی‌کند
+                }}
+                itemStyle={{
+                  writingDirection: 'rtl',
+                  textAlign: 'right',
+                }}
+
+
             >
               <Picker.Item label="انتخاب کنید..." value="" />
               {field.settings?.map((option) => (
@@ -752,12 +881,104 @@ const DynamicFormWallet = ({
                   value={option.value}
                 />
               ))}
-            </Picker>
+            </Picker> */}
+
+            <RTLPicker
+              selectedValue={formValues[field.name] || ''}
+              onValueChange={(value) => handleChange(field.name, value)}
+              options={field.settings}
+              placeholder="انتخاب کنید..."
+              label=""
+            />
+
+
           </View>
         </View>
       );
     }
   };
+  // const renderSelectField = (field) => {
+  //   if (field.name === "size" || field.name === "output-size" || field.name === "aspect_ratio") {
+  //     const options = field.settings || [];
+  //     const showAll = showAllOptions[field.name] || false;
+  //     const displayedOptions = showAll ? options : options.slice(0, 6);
+      
+  //     return (
+  //       <View style={styles.fieldContainer} key={field.name}>
+  //         <Text style={styles.label}>
+  //           {field.label}
+  //           {field.is_req === 1 && <Text style={styles.requiredStar}> *</Text>}
+  //         </Text>
+          
+  //         <View style={styles.gridContainer}>
+  //           {displayedOptions.map((option) => (
+  //             <TouchableOpacity
+  //               key={option.value}
+  //               style={[
+  //                 styles.gridItem,
+  //                 formValues[field.name] === option.value && styles.selectedGridItem,
+  //               ]}
+  //               onPress={() => handleChange(field.name, option.value)}
+  //             >
+  //               <Text style={[
+  //                 styles.gridItemText,
+  //                 formValues[field.name] === option.value && styles.selectedGridItemText,
+  //               ]}>
+  //                 {option.label}
+  //               </Text>
+  //               {parseDimensions(option.label)}
+  //             </TouchableOpacity>
+  //           ))}
+  //         </View>
+          
+  //         {options.length > 6 && (
+  //           <TouchableOpacity
+  //             style={styles.showMoreButton}
+  //             onPress={() => setShowAllOptions(prev => ({
+  //               ...prev,
+  //               [field.name]: !showAll
+  //             }))}
+  //           >
+  //             <Text style={styles.showMoreText}>
+  //               {showAll ? 'نمایش کمتر' : 'نمایش بیشتر'}
+  //             </Text>
+  //             <Icon 
+  //               name={showAll ? 'chevron-up' : 'chevron-down'} 
+  //               size={16} 
+  //               color="#007AFF" 
+  //             />
+  //           </TouchableOpacity>
+  //         )}
+  //       </View>
+  //     );
+  //   } else {
+  //     return (
+  //       <View style={styles.fieldContainer} key={field.name}>
+  //         <Text style={styles.label}>
+  //           {field.label}
+  //           {field.is_req === 1 && <Text style={styles.requiredStar}> *</Text>}
+  //         </Text>
+          
+  //         <View style={styles.pickerContainer}>
+  //           <Picker
+  //             selectedValue={formValues[field.name] || ''}
+  //             onValueChange={(itemValue) => handleChange(field.name, itemValue)}
+  //             style={styles.picker}
+  //           >
+  //             <Picker.Item label="انتخاب کنید..." value="" />
+  //             {field.settings?.map((option) => (
+  //               <Picker.Item
+  //                 key={option.value}
+  //                 label={option.label}
+  //                 value={option.value}
+  //               />
+  //             ))}
+  //           </Picker>
+  //         </View>
+  //       </View>
+  //     );
+  //   }
+  // };
 
   const renderTextareaField = (field) => {
     if (field.name === "prompt") {
@@ -1401,17 +1622,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   selectedGridItem: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#00000',
     borderColor: '#007AFF',
+    direction:'rtl'
   },
   gridItemText: {
     color: '#333',
     fontSize: 14,
     textAlign: 'center',
-    marginBottom: 4,
   },
   selectedGridItemText: {
-    color: '#fff',
+    color: '#000',
+    fontWeight: 'bold',
+  },
+  selectedGridItemText: {
+    color: '#000',
     fontWeight: 'bold',
   },
   showMoreButton: {

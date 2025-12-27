@@ -238,7 +238,6 @@ const DynamicForm = ({ ModelFormData, ModelPageData }) => {
             // Host: hostUrl,
           },
              baseURL: hostUrl,
-          
         }
       );
       
