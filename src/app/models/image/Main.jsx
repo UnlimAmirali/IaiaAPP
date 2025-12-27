@@ -27,7 +27,8 @@ const MainPrompt = ({
 
   const renderPage = () => {
     // Check if we have form data (non-wallet)
-    if (ModelFormData && Object.keys(ModelFormData).length > 0) {
+    if (ModelFormData && Object.keys(ModelFormData).length > 0
+        && !ModelPageData['wallet_apis'] ) {
       return (
         <ModelFormNoneWallet
           ModelFormData={ModelFormData}

@@ -24,6 +24,7 @@ import CheckBox from '@react-native-community/checkbox';
 import Slider from '@react-native-community/slider';
 import Toast from 'react-native-toast-message';
 import { useNavigation } from '@react-navigation/native';
+import { SvgUri } from 'react-native-svg';
 // import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Icons
@@ -34,7 +35,9 @@ import AntDesign from 'react-native-vector-icons/AntDesign';
 
 // Components
 import History from './History';
-// import SubmitBtn from './SubmitBtn';
+import Config from 'react-native-config';
+
+import SubmitBtn from './SubmitBtn';
 // import LoadingButton from './LoadingBtn';
 // import SideMenuMobile from './SideMenuMobile';
 // import MenuTopMobile from './MenuTopMobile';
@@ -71,15 +74,24 @@ const DynamicFormWallet = ({
   const scrollViewRef = useRef(null);
   const imageRef = useRef(null);
 
+  const apiUrl = Config.API_URL;
+  const refererUrl = Config.Referer_URL;
+  const hostUrl = Config.Host_URL;
+  const hostStream = Config.Host_for_strem;
+
+
   // Initialize
   useEffect(() => {
+    // Alert.alert("test","")
+    console.log("modelpage", ModelPageData)
+    console.log("modelform", ModelFormData)
     checkLastTask();
     if (ModelPageData?.history) {
       setHistory(ModelPageData.history);
     }
     
     // Initialize wallet API selection
-    if (ModelPageData?.wallet_apis?.length === 1) {
+    if (ModelPageData?.wallet_apis?.length === 1 || !walletApiSelected) {
       setWalletApiSelected(ModelPageData.wallet_apis[0]);
     }
   }, []);
@@ -90,8 +102,16 @@ const DynamicFormWallet = ({
       const token = storage.getString('token');
       const response = await axios({
         method: 'get',
-        url: `${process.env.API_BASE_URL}/response/lasttask/`,
-        headers: { Authorization: token },
+        url: `${apiUrl}/response/lasttask/`,
+      
+          headers: {
+            Authorization: storage.getString("token") || "",
+            "Content-Type": "application/json",
+            Referer: refererUrl,
+            // Host: hostUrl,
+          },
+             baseURL: hostUrl,
+          
       });
       
       if (response?.data?.data?.resID) {
@@ -110,14 +130,25 @@ const DynamicFormWallet = ({
 
   // Fetch form data based on selected wallet API
   const fetchFormData = async () => {
+    console.log("in fetch")
     if (!walletApiSelected) return;
     
     try {
       const newSlug = `${ModelPageData.pageInfo.slug}-${walletApiSelected.id}`;
+      console.log("new slug", newSlug)
       const response = await axios.get(
-        `${process.env.API_BASE_URL}/forms/?slug=${newSlug}&history_limit=25`
+        `${apiUrl}/forms/?slug=${newSlug}&history_limit=25&lang=fa&style=dark`,
+        {
+          headers: {
+            Authorization: storage.getString("token") || "",
+            // "Content-Type": "application/json",
+            Referer: refererUrl,
+            // Host: hostUrl,
+          },
+             baseURL: hostStream,
+        }
       );
-      
+      console.log("response" , response.data)
       setFormData(response.data.data);
       
       // Initialize form values
@@ -140,7 +171,7 @@ const DynamicFormWallet = ({
       setFormValues(initialValues);
       
     } catch (error) {
-      console.error('Error fetching form data:', error);
+      console.log('Error fetching form data2:', error.response);
       Toast.show({
         type: 'error',
         text1: 'خطا',
@@ -150,9 +181,9 @@ const DynamicFormWallet = ({
   };
 
   useEffect(() => {
-    if (walletApiSelected) {
+    // if (walletApiSelected) {
       fetchFormData();
-    }
+    // }
   }, [walletApiSelected]);
 
   // Handle form changes
@@ -213,7 +244,7 @@ const DynamicFormWallet = ({
       const token = storage.getString('token');
       
       const response = await axios.post(
-        `${process.env.API_BASE_URL}/response/improveprompt/`,
+        `${apiUrl}/response/improveprompt/`,
         {
           type: "image",
           prompt: formValues.prompt
@@ -442,12 +473,15 @@ const DynamicFormWallet = ({
     try {
       const token = storage.getString('token');
       const response = await axios.get(
-        `${process.env.API_BASE_URL}/models/${ModelPageData.pageInfo.slug}/?history_limit=25`,
+        `${apiUrl}/models/${ModelPageData.pageInfo.slug}/?history_limit=25`,
         {
           headers: {
-            Authorization: token,
-            'Content-Type': 'application/json'
+            Authorization: storage.getString("token") || "",
+            "Content-Type": "application/json",
+            Referer: refererUrl,
+            // Host: hostUrl,
           },
+             baseURL: hostUrl,
         }
       );
       
@@ -813,17 +847,23 @@ const DynamicFormWallet = ({
   // Render wallet API dropdown
   const renderWalletApiDropdown = () => {
     const walletApis = ModelPageData?.wallet_apis || [];
-    
+    console.log("wallet api", walletApis[0].img_url)
     if (walletApis.length === 0) return null;
     
     if (walletApis.length === 1) {
       return (
         <View style={styles.singleApiContainer}>
           <View style={styles.apiInfo}>
-            <Image 
+            {/* <Image 
               source={{ uri: walletApis[0].img_url || 'https://via.placeholder.com/50' }}
               style={styles.apiImage}
+            /> */}
+            <SvgUri 
+              uri= {walletApis[0].img_url}
+              style={styles.apiImage}
+
             />
+
             <View style={styles.apiDetails}>
               <Text style={styles.apiTitle}>{walletApis[0].title}</Text>
               <Text style={styles.apiPrice}>{walletApis[0].price_txt}</Text>
@@ -841,10 +881,16 @@ const DynamicFormWallet = ({
         >
           {walletApiSelected ? (
             <View style={styles.selectedApi}>
-              <Image 
+              {/* <Image 
                 source={{ uri: walletApiSelected.img_url || 'https://via.placeholder.com/50' }}
                 style={styles.apiImageSmall}
-              />
+              /> */}
+            <SvgUri 
+              uri= {walletApiSelected.img_url}
+              style={styles.apiImageSmall}
+
+            />
+
               <Text style={styles.selectedApiText}>{walletApiSelected.title}</Text>
               <Icon name="chevron-down" size={20} color="#fff" />
             </View>
@@ -883,10 +929,16 @@ const DynamicFormWallet = ({
                       setIsModalOpen(false);
                     }}
                   >
-                    <Image 
+                    {/* <Image 
                       source={{ uri: item.img_url || 'https://via.placeholder.com/50' }}
                       style={styles.apiOptionImage}
+                    /> */}
+                    <SvgUri 
+                      uri= {walletApiSelected.img_url}
+                      style={styles.apiOptionImage}
+
                     />
+                    
                     <View style={styles.apiOptionDetails}>
                       <Text style={styles.apiOptionTitle}>{item.title}</Text>
                       <Text style={styles.apiOptionPrice}>{item.price_txt}</Text>
@@ -1003,7 +1055,7 @@ const DynamicFormWallet = ({
                 {formData.fields.map((field) => renderField(field))}
               </View>
               
-              <SubmitBtn onPress={handleSubmit} loading={isSubmitting} />
+            
               
               {/* File Usage Info */}
               {ModelPageData?.total_file_count !== -1 && 
@@ -1025,12 +1077,13 @@ const DynamicFormWallet = ({
                 <Text style={styles.processingText}>در حال پردازش دستور شما هستیم</Text>
               </View>
             )}
+              <SubmitBtn onPress={handleSubmit}  />
             
             {renderOutput()}
           </View>
           
           {/* Samples Section */}
-          {ModelPageData.pageInfo?.samples && (
+          {/* {ModelPageData.pageInfo?.samples && (
             <View style={styles.samplesSection}>
               <Text style={styles.sectionTitle}>نمونه‌ها</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -1055,7 +1108,7 @@ const DynamicFormWallet = ({
                 ))}
               </ScrollView>
             </View>
-          )}
+          )} */}
           
           {/* Content Section */}
           {ModelPageData.pageInfo?.content && (
@@ -1076,14 +1129,14 @@ const DynamicFormWallet = ({
         transparent={true}
         onRequestClose={() => setMobileHistoryMenu(false)}
       >
-        <SideMenuMobile
+        {/* <SideMenuMobile
           setMobileHistoryMenu={setMobileHistoryMenu}
           HistoryData={history}
           handleHistory={handleHistory}
           handleDeleteHistory={handleDeleteHistory}
           setDataOutput={setDataOutput}
           setFormValues={setFormValues}
-        />
+        /> */}
       </Modal>
       
       {/* History Button */}
@@ -1105,9 +1158,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    // direction:'rtl'
   },
   scrollView: {
     flex: 1,
+    marginTop:20
   },
   pageTitle: {
     fontSize: 24,
@@ -1125,6 +1180,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   formContainer: {
+    direction:'rtl',
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
@@ -1238,6 +1294,7 @@ const styles = StyleSheet.create({
   },
   apiOptionDetails: {
     flex: 1,
+    marginRight:5,
   },
   apiOptionTitle: {
     fontSize: 16,
@@ -1396,9 +1453,9 @@ const styles = StyleSheet.create({
   },
   improveButton: {
     position: 'absolute',
-    left: 8,
-    top: 8,
-    backgroundColor: '#007AFF',
+    left: -8,
+    bottom: -8,
+    backgroundColor: '#000',
     borderRadius: 20,
     width: 40,
     height: 40,
@@ -1532,6 +1589,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
+    marginTop:60,
   },
   contentText: {
     fontSize: 14,
